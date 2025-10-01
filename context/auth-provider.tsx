@@ -1,158 +1,201 @@
-'use client';
+'use client'
 
-import { AuthContextType, User } from '@/types';
-import { Route } from 'next';
-import { useRouter } from 'next/navigation';
-import {
-  createContext,
-  ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from 'react';
+import { User } from '@/types/user'
+import React, { createContext, useContext, useEffect, useReducer } from 'react'
+import { toast } from "sonner"
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-interface AuthProviderProps {
-  children: ReactNode;
+interface AuthState {
+  user: User | null
+  isLoading: boolean
+  isAuthenticated: boolean
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
+interface AuthContextType extends AuthState {
+  login: (email: string, password: string) => Promise<void>
+  loginWithGoogle: () => Promise<void>
+  logout: () => Promise<void>
+  updateUser: (updates: Partial<User>) => void
+  refreshToken: () => Promise<void>
+}
 
-  // Check authentication status on mount
+export const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+type AuthAction =
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_USER'; payload: User | null }
+  | { type: 'LOGIN_SUCCESS'; payload: User }
+  | { type: 'LOGOUT' }
+  | { type: 'UPDATE_USER'; payload: Partial<User> }
+
+const authReducer = (state: AuthState, action: AuthAction): AuthState => {
+  switch (action.type) {
+    case 'SET_LOADING':
+      return { ...state, isLoading: action.payload }
+    case 'SET_USER':
+      return {
+        ...state,
+        user: action.payload,
+        isAuthenticated: !!action.payload,
+        isLoading: false,
+      }
+    case 'LOGIN_SUCCESS':
+      return {
+        ...state,
+        user: action.payload,
+        isAuthenticated: true,
+        isLoading: false,
+      }
+    case 'LOGOUT':
+      return {
+        ...state,
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+      }
+    case 'UPDATE_USER':
+      return {
+        ...state,
+        user: state.user ? { ...state.user, ...action.payload } : null,
+      }
+    default:
+      return state
+  }
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [state, dispatch] = useReducer(authReducer, {
+    user: null,
+    isLoading: true,
+    isAuthenticated: false,
+  })
   useEffect(() => {
-    void checkAuth();
-  }, []);
+    checkAuthStatus()
+  }, [])
 
-  const checkAuth = async (): Promise<void> => {
+  const checkAuthStatus = async () => {
     try {
       const response = await fetch('/api/auth/me', {
-        method: 'GET',
         credentials: 'include',
-      });
+      })
 
       if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data?.user) {
-          setUser(data.data.user);
-        }
+        const data = await response.json()
+        dispatch({ type: 'LOGIN_SUCCESS', payload: data.user })
+      } else {
+        dispatch({ type: 'LOGOUT' })
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
-    } finally {
-      setLoading(false);
+      console.error('Auth check failed:', error)
+      dispatch({ type: 'LOGOUT' })
     }
-  };
+  }
 
-  const login = async (email: string, password: string): Promise<void> => {
-    setLoading(true);
+  const login = async (email: string, password: string) => {
     try {
+      dispatch({ type: 'SET_LOADING', payload: true })
+
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ email, password }),
-      });
+        credentials: 'include',
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data.error?.message || 'Login failed');
+      if (response.ok) {
+        dispatch({ type: 'LOGIN_SUCCESS', payload: data.data.user })
+        toast.success("Welcome back!", {
+          description: `Logged in as ${data.data.user.firstName} ${data.data.user.lastName}`,
+        })
+      } else {
+        throw new Error(data.error?.message || 'Login failed')
       }
-
-      if (data.success && data.data?.user) {
-        setUser(data.data.user);
-        router.push('/dashboard');
-      }
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      dispatch({ type: 'SET_LOADING', payload: false })
+      throw error
     }
-  };
+  }
 
-  const logout = async (): Promise<void> => {
-    setLoading(true);
+  const loginWithGoogle = async () => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true })
+      const response = await fetch('/api/auth/google', {
+        method: 'POST',
+        credentials: 'include',
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        dispatch({ type: 'LOGIN_SUCCESS', payload: data.data.user })
+        toast.success("Welcome back!", {
+          description: "Successfully logged in with Google",
+        })
+      } else {
+        throw new Error(data.error?.message || 'Google login failed')
+      }
+    } catch (error) {
+      dispatch({ type: 'SET_LOADING', payload: false })
+      throw error
+    }
+  }
+
+  const logout = async () => {
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include',
-      });
-
-      setUser(null);
-      router.push('/auth/login' as Route);
+      })
     } catch (error) {
-      console.error('Logout failed:', error);
-      setUser(null);
-      router.push('/auth/login' as Route);
+      console.error('Logout request failed:', error)
     } finally {
-      setLoading(false);
+      dispatch({ type: 'LOGOUT' })
+      toast("Logged out", {
+        description: "You have been successfully logged out",
+      })
     }
-  };
+  }
 
-  const refreshToken = async (): Promise<void> => {
+  const updateUser = (updates: Partial<User>) => {
+    dispatch({ type: 'UPDATE_USER', payload: updates })
+  }
+
+  const refreshToken = async () => {
     try {
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
         credentials: 'include',
-      });
+      })
 
       if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data?.user) {
-          setUser(data.data.user);
-        }
+        const data = await response.json()
+        dispatch({ type: 'LOGIN_SUCCESS', payload: data.data.user })
       } else {
-        setUser(null);
-        router.push('/auth/login' as Route);
+        dispatch({ type: 'LOGOUT' })
       }
     } catch (error) {
-      console.error('Token refresh failed:', error);
-      setUser(null);
-      router.push('/auth/login' as Route);
+      console.error('Token refresh failed:', error)
+      dispatch({ type: 'LOGOUT' })
     }
-  };
-
-  const updateProfile = async (profileData: Partial<User>): Promise<void> => {
-    try {
-      const response = await fetch('/api/auth/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(profileData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error?.message || 'Profile update failed');
-      }
-
-      if (data.success && data.data?.user) {
-        setUser(data.data.user);
-      }
-    } catch (error) {
-      throw error;
-    }
-  };
+  }
 
   const value: AuthContextType = {
-    user,
-    loading,
+    ...state,
     login,
+    loginWithGoogle,
     logout,
+    updateUser,
     refreshToken,
-    updateProfile,
-  };
+  }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider')
   }
-  return context;
+  return context
 }
