@@ -12,22 +12,12 @@ const isProd = process.env.NODE_ENV === 'production';
 const isAnalyze = process.env.ANALYZE === 'true';
 
 const nextConfig: NextConfig = {
-  // Core Next.js settings
+  turbopack: {root: './'},
   reactStrictMode: true,
-  swcMinify: true,
   poweredByHeader: false,
   output: 'standalone',
-
-  // Experimental features
-  experimental: {
-    turbo: {
-      resolveAlias: { '@': './src' },
-    },
-    serverComponentsExternalPackages: ['mongodb', 'bcryptjs', 'jsonwebtoken'],
-    typedRoutes: true,
-  },
-
-  // Image optimization
+  typedRoutes: true,
+  serverExternalPackages: ['mongodb', 'bcryptjs', 'jsonwebtoken'],
   images: {
     domains: ['localhost', 'skfsd.gov.in'],
     formats: ['image/webp', 'image/avif'],
@@ -36,8 +26,6 @@ const nextConfig: NextConfig = {
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
-
-  // Security headers
   async headers() {
     return [
       {
