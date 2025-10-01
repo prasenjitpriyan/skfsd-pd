@@ -12,7 +12,7 @@ const isProd = process.env.NODE_ENV === 'production';
 const isAnalyze = process.env.ANALYZE === 'true';
 
 const nextConfig: NextConfig = {
-  turbopack: {root: './'},
+  turbopack: { root: __dirname },
   reactStrictMode: true,
   poweredByHeader: false,
   output: 'standalone',
