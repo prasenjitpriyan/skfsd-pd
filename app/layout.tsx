@@ -1,37 +1,143 @@
-import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { ToastProvider } from '@/components/ui/toast';
+import { AuthProvider } from '@/context/auth-provider';
+import { ThemeProvider } from '@/context/theme-provider';
+import type { Metadata, Viewport } from 'next';
+import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const inter = Inter({
   subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
+  variable: '--font-mono',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'SKFSD - South Kolkata First Sub Division',
+  title: {
+    default: 'SKFSD Portal - South Kolkata First Sub Division',
+    template: '%s | SKFSD Portal',
+  },
   description:
-    'Postal Office Management System for South Kolkata First Sub Division',
-  keywords: 'postal, office, management, kolkata, india post',
-  authors: [{ name: 'SKFSD Team' }],
-  viewport: 'width=device-width, initial-scale=1',
+    'Official portal for South Kolkata First Sub Division postal office management system',
+  keywords: [
+    'SKFSD',
+    'South Kolkata',
+    'Postal Office',
+    'India Post',
+    'Government Portal',
+    'Document Management',
+    'Daily Metrics',
+  ],
+  authors: [
+    {
+      name: 'SKFSD IT Team',
+      url: 'https://skfsd.gov.in',
+    },
+  ],
+  creator: 'SKFSD IT Department',
+  publisher: 'India Post - Department of Posts',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  ),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_IN',
+    url: 'https://skfsd.gov.in',
+    siteName: 'SKFSD Portal',
+    title: 'SKFSD Portal - South Kolkata First Sub Division',
+    description:
+      'Official portal for South Kolkata First Sub Division postal office management',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'SKFSD Portal',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    site: '@IndiaPostOffice',
+    creator: '@SKFSDOfficial',
+    title: 'SKFSD Portal',
+    description:
+      'Official portal for South Kolkata First Sub Division postal office management',
+    images: ['/og-image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon-16x16.png',
+    apple: '/apple-touch-icon.png',
+  },
+  manifest: '/manifest.json',
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: 'white' },
+    { media: '(prefers-color-scheme: dark)', color: 'black' },
+  ],
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+};
+
+interface RootLayoutProps {
   children: React.ReactNode;
-}>) {
+}
+
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin=""
+        />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
+        suppressHydrationWarning
       >
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
