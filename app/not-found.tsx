@@ -13,10 +13,10 @@ export default function NotFound() {
         </p>
       </div>
       <div className="flex space-x-2">
-        <Button asChild>
+        <Button>
           <Link href="/dashboard">Go to Dashboard</Link>
         </Button>
-        <Button variant="outline" asChild>
+        <Button variant="outline">
           <Link href="/">Go Home</Link>
         </Button>
       </div>

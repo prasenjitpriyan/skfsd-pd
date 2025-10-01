@@ -108,7 +108,7 @@ export default function RegisterPage() {
               You will receive an email notification once your account is
               approved by an administrator.
             </p>
-            <Button asChild className="w-full">
+            <Button className="w-full">
               <Link href={'/auth/login' as Route}>Return to Login</Link>
             </Button>
           </div>
