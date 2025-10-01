@@ -1,6 +1,9 @@
-import { ApiRequestConfig, ApiResponse } from '@/types/index';
+'use client'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+import { ApiRequestConfig, ApiResponse } from '@/types/index'
+import { useState } from 'react'
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ''
 
 async function apiFetch<T>(
   url: string,
@@ -13,45 +16,42 @@ async function apiFetch<T>(
   }: ApiRequestConfig = {}
 ): Promise<ApiResponse<T>> {
   try {
-    // Build query string if params exist
     if (params) {
       const queryString = new URLSearchParams(
         Object.entries(params).map(([key, val]) => [key, String(val)])
-      ).toString();
-      url += `?${queryString}`;
+      ).toString()
+      url += `?${queryString}`
     }
 
     const requestOptions: RequestInit = {
       method,
       headers: { ...headers },
-      credentials: 'include', // always include cookies
-    };
+      credentials: 'include',
+    }
 
-    // Handle request body if not GET/DELETE
     if (method !== 'GET' && method !== 'DELETE' && data !== undefined) {
       if (typeof data === 'object' && !(data instanceof FormData) && !(data instanceof Blob)) {
-        requestOptions.body = JSON.stringify(data);
+        requestOptions.body = JSON.stringify(data)
         requestOptions.headers = {
           ...requestOptions.headers,
           'Content-Type': 'application/json',
-        };
+        }
       } else {
-        requestOptions.body = data as BodyInit;
+        requestOptions.body = data as BodyInit
       }
     }
 
-    // Handle timeout
-    const controller = new AbortController();
+    const controller = new AbortController()
     if (timeout) {
-      setTimeout(() => controller.abort(), timeout);
+      setTimeout(() => controller.abort(), timeout)
     }
 
     const response = await fetch(`${API_BASE_URL}${url}`, {
       ...requestOptions,
       signal: controller.signal,
-    });
+    })
 
-    const responseData = await response.json();
+    const responseData = await response.json()
 
     if (!response.ok) {
       return {
@@ -60,48 +60,53 @@ async function apiFetch<T>(
           message: responseData.error?.message || 'Request failed',
           code: response.status,
         },
-      };
+      }
     }
 
-    return { success: true, data: responseData.data as T };
+    return { success: true, data: responseData.data as T }
   } catch (error: unknown) {
-    let message = 'Unexpected error';
+    let message = 'Unexpected error'
     if (error instanceof Error) {
-      message = error.name === 'AbortError' ? 'Request timed out' : error.message;
+      message = error.name === 'AbortError' ? 'Request timed out' : error.message
     }
 
     return {
       success: false,
       error: {
         message,
-        code: "NETWORK_ERROR",
+        code: 'NETWORK_ERROR',
       },
-    };
+    }
   }
 }
 
-export const useApi = {
-  get: <T>(url: string, config?: Omit<ApiRequestConfig, 'method' | 'data'>) =>
-    apiFetch<T>(url, { ...config, method: 'GET' }),
+export function useApi() {
+  const [isLoading, setIsLoading] = useState(false)
 
-  post: <T>(
-    url: string,
-    data?: ApiRequestConfig['data'],
-    config?: Omit<ApiRequestConfig, 'method' | 'data'>
-  ) => apiFetch<T>(url, { ...config, method: 'POST', data }),
+  const request = async <T>(url: string, config: ApiRequestConfig) => {
+    setIsLoading(true)
+    try {
+      return await apiFetch<T>(url, config)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-  put: <T>(
-    url: string,
-    data?: ApiRequestConfig['data'],
-    config?: Omit<ApiRequestConfig, 'method' | 'data'>
-  ) => apiFetch<T>(url, { ...config, method: 'PUT', data }),
+  return {
+    isLoading,
+    get: <T>(url: string, config?: Omit<ApiRequestConfig, 'method' | 'data'>) =>
+      request<T>(url, { ...config, method: 'GET' }),
 
-  patch: <T>(
-    url: string,
-    data?: ApiRequestConfig['data'],
-    config?: Omit<ApiRequestConfig, 'method' | 'data'>
-  ) => apiFetch<T>(url, { ...config, method: 'PATCH', data }),
+    post: <T>(url: string, data?: ApiRequestConfig['data'], config?: Omit<ApiRequestConfig, 'method' | 'data'>) =>
+      request<T>(url, { ...config, method: 'POST', data }),
 
-  delete: <T>(url: string, config?: Omit<ApiRequestConfig, 'method' | 'data'>) =>
-    apiFetch<T>(url, { ...config, method: 'DELETE' }),
-};
+    put: <T>(url: string, data?: ApiRequestConfig['data'], config?: Omit<ApiRequestConfig, 'method' | 'data'>) =>
+      request<T>(url, { ...config, method: 'PUT', data }),
+
+    patch: <T>(url: string, data?: ApiRequestConfig['data'], config?: Omit<ApiRequestConfig, 'method' | 'data'>) =>
+      request<T>(url, { ...config, method: 'PATCH', data }),
+
+    delete: <T>(url: string, config?: Omit<ApiRequestConfig, 'method' | 'data'>) =>
+      request<T>(url, { ...config, method: 'DELETE' }),
+  }
+}
