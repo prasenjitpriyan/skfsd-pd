@@ -24,10 +24,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Check authentication status on mount
   useEffect(() => {
-    checkAuth();
+    void checkAuth();
   }, []);
 
-  const checkAuth = async () => {
+  const checkAuth = async (): Promise<void> => {
     try {
       const response = await fetch('/api/auth/me', {
         method: 'GET',
@@ -36,7 +36,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.data.user) {
+        if (data.success && data.data?.user) {
           setUser(data.data.user);
         }
       }
@@ -52,9 +52,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
@@ -65,12 +63,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         throw new Error(data.error?.message || 'Login failed');
       }
 
-      if (data.success && data.data.user) {
+      if (data.success && data.data?.user) {
         setUser(data.data.user);
         router.push('/dashboard');
       }
-    } catch (error) {
-      throw error;
     } finally {
       setLoading(false);
     }
@@ -88,7 +84,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       router.push('/auth/login' as Route);
     } catch (error) {
       console.error('Logout failed:', error);
-      // Even if logout fails, clear local state
       setUser(null);
       router.push('/auth/login' as Route);
     } finally {
@@ -105,11 +100,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.data.user) {
+        if (data.success && data.data?.user) {
           setUser(data.data.user);
         }
       } else {
-        // Refresh failed, redirect to login
         setUser(null);
         router.push('/auth/login' as Route);
       }
@@ -124,9 +118,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const response = await fetch('/api/auth/profile', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(profileData),
       });
@@ -137,7 +129,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         throw new Error(data.error?.message || 'Profile update failed');
       }
 
-      if (data.success && data.data.user) {
+      if (data.success && data.data?.user) {
         setUser(data.data.user);
       }
     } catch (error) {
