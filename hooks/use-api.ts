@@ -1,6 +1,6 @@
 'use client'
 
-import { ApiRequestConfig, ApiResponse } from '@/types/index'
+import { ApiRequestConfig } from '@/types/index'
 import { useState } from 'react'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ''
@@ -14,8 +14,9 @@ async function apiFetch<T>(
     timeout,
     data,
   }: ApiRequestConfig = {}
-): Promise<ApiResponse<T>> {
+): Promise<T> {
   try {
+    // Build query params
     if (params) {
       const queryString = new URLSearchParams(
         Object.entries(params).map(([key, val]) => [key, String(val)])
@@ -29,6 +30,7 @@ async function apiFetch<T>(
       credentials: 'include',
     }
 
+    // Handle body
     if (method !== 'GET' && method !== 'DELETE' && data !== undefined) {
       if (typeof data === 'object' && !(data instanceof FormData) && !(data instanceof Blob)) {
         requestOptions.body = JSON.stringify(data)
@@ -41,42 +43,32 @@ async function apiFetch<T>(
       }
     }
 
+    // Timeout handling
     const controller = new AbortController()
     if (timeout) {
       setTimeout(() => controller.abort(), timeout)
     }
 
+    // Execute request
     const response = await fetch(`${API_BASE_URL}${url}`, {
       ...requestOptions,
       signal: controller.signal,
     })
 
-    const responseData = await response.json()
+    const json = await response.json()
 
     if (!response.ok) {
-      return {
-        success: false,
-        error: {
-          message: responseData.error?.message || 'Request failed',
-          code: response.status,
-        },
-      }
+      throw new Error(json.error?.message || 'Request failed')
     }
 
-    return { success: true, data: responseData.data as T }
+    // ✅ Always return `json.data` directly
+    return json.data as T
   } catch (error: unknown) {
-    let message = 'Unexpected error'
     if (error instanceof Error) {
-      message = error.name === 'AbortError' ? 'Request timed out' : error.message
+      if (error.name === 'AbortError') throw new Error('Request timed out')
+      throw new Error(error.message)
     }
-
-    return {
-      success: false,
-      error: {
-        message,
-        code: 'NETWORK_ERROR',
-      },
-    }
+    throw new Error('Unexpected error')
   }
 }
 
