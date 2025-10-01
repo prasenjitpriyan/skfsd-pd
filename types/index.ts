@@ -55,6 +55,7 @@ export type UserRole =
   | 'DeliveryCenterUser';
 
 export interface UserRoleInfo {
+  name: unknown;
   role: UserRole;
   permissions: string[];
   officeId?: ID;
