@@ -1,18 +1,30 @@
-'use client'
+'use client';
 
-import { DRMList } from '@/components/drm/drm-list'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Filter, Plus, Search } from 'lucide-react'
-import Link from 'next/link'
-import { useState } from 'react'
+import { DRMList } from '@/components/drm/drm-list';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Filter, Plus, Search } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
 
 export default function DRMPage() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   return (
     <div className="space-y-6">
@@ -24,7 +36,7 @@ export default function DRMPage() {
           </p>
         </div>
 
-        <Button asChild>
+        <Button>
           <Link href="/drm/create">
             <Plus className="mr-2 h-4 w-4" />
             Create New Entry
@@ -39,7 +51,9 @@ export default function DRMPage() {
             <Filter className="mr-2 h-5 w-5" />
             Filters
           </CardTitle>
-          <CardDescription>Filter DRM entries by status, category, or search term</CardDescription>
+          <CardDescription>
+            Filter DRM entries by status, category, or search term
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -91,5 +105,5 @@ export default function DRMPage() {
         categoryFilter={categoryFilter}
       />
     </div>
-  )
+  );
 }
