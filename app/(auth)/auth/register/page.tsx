@@ -64,13 +64,15 @@ export default function RegisterPage() {
     try {
       setIsLoading(true);
       setError('');
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { confirmPassword, ...apiData } = data;
 
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(apiData),
       });
 
       const result = await response.json();
@@ -108,7 +110,7 @@ export default function RegisterPage() {
               You will receive an email notification once your account is
               approved by an administrator.
             </p>
-            <Button className="w-full">
+            <Button className="w-full" asChild>
               <Link href={'/auth/login' as Route}>Return to Login</Link>
             </Button>
           </div>
@@ -252,6 +254,7 @@ export default function RegisterPage() {
                 type="button"
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (
                   <EyeOff className="h-4 w-4" />
@@ -282,6 +285,9 @@ export default function RegisterPage() {
                 type="button"
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                aria-label={
+                  showConfirmPassword ? 'Hide password' : 'Show password'
+                }
               >
                 {showConfirmPassword ? (
                   <EyeOff className="h-4 w-4" />
@@ -297,9 +303,15 @@ export default function RegisterPage() {
             )}
           </div>
 
-          <Button type="submit" className="w-full" loading={isLoading}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Create Account
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              'Creating Account...'
+            ) : (
+              <>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Create Account
+              </>
+            )}
           </Button>
         </form>
 

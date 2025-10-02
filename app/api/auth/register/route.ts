@@ -1,7 +1,10 @@
 import { hashPassword } from '@/lib/auth';
 import { connectToDatabase } from '@/lib/db';
+import { User } from '@/types/user';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+
+type UserInDb = Omit<User, 'id'> & { password: string };
 
 const registerSchema = z.object({
   firstName: z.string().min(2),
@@ -17,11 +20,12 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const userData = registerSchema.parse(body);
+    const { password, ...userDetails } = userData;
 
     const db = await connectToDatabase();
+    const usersCollection = db.collection<UserInDb>('users');
 
-    // Check if user already exists
-    const existingUser = await db.collection('users').findOne({
+    const existingUser = await usersCollection.findOne({
       $or: [
         { email: userData.email.toLowerCase() },
         { employeeId: userData.employeeId },
@@ -41,15 +45,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash password
-    const hashedPassword = await hashPassword(userData.password);
+    const hashedPassword = await hashPassword(password);
 
-    // Create user
-    const newUser = {
-      ...userData,
+    const newUser: UserInDb = {
+      ...userDetails,
       email: userData.email.toLowerCase(),
       password: hashedPassword,
-      isActive: false, // Requires admin approval
+      isActive: false,
       emailVerified: false,
       twoFactorEnabled: false,
       preferences: {
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date(),
     };
 
-    const result = await db.collection('users').insertOne(newUser);
+    const result = await usersCollection.insertOne(newUser);
 
     return NextResponse.json({
       success: true,
