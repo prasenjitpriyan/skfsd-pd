@@ -45,3 +45,16 @@ export interface Notification {
   createdAt: string;
   data?: Record<string, unknown>;
 }
+
+export interface Report {
+  id: string;
+  title: string;
+  description?: string;
+  status: 'draft' | 'published' | 'archived';
+  createdAt: string; // ISO date string
+  updatedAt?: string; // ISO date string
+  authorId?: string;
+  authorName?: string;
+  fileUrl?: string; // URL to the report file (PDF, etc.)
+  metadata?: Record<string, unknown>; // Additional optional metadata
+}
