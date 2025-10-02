@@ -1,12 +1,14 @@
-import { verifyToken } from '@/lib/auth';
+// FIX: Import the correct, renamed function for Node.js API routes.
+import { verifyTokenAndGetUser } from '@/lib/auth';
 import { connectToDatabase } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    const tokenPayload = await verifyToken(request);
+    // FIX: Call the correct function. It verifies the token AND checks the user in the DB.
+    const userPayload = await verifyTokenAndGetUser(request);
 
-    if (!tokenPayload) {
+    if (!userPayload) {
       return NextResponse.json(
         {
           success: false,
@@ -15,6 +17,8 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // The user is now confirmed to be authenticated and active. Proceed with fetching stats.
 
     const db = await connectToDatabase();
     const today = new Date();
@@ -36,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate percentage changes
     const calculateChange = (current: number, previous: number): number => {
-      if (previous === 0) return current > 0 ? 100 : 0;
+      if (!previous || previous === 0) return current > 0 ? 100 : 0;
       return ((current - previous) / previous) * 100;
     };
 
@@ -76,6 +80,7 @@ export async function GET(request: NextRequest) {
       drmEntries.total += stat.count;
       switch (stat._id) {
         case 'Submitted':
+        case 'Scrutinized': // Also count 'Scrutinized' as pending review
           drmEntries.pending += stat.count;
           break;
         case 'Finalized':

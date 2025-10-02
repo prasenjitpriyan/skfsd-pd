@@ -1,16 +1,9 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { ObjectId } from 'mongodb';
 import { NextRequest } from 'next/server';
 import { connectToDatabase } from './db';
-
-interface TokenPayload {
-  userId: string;
-  email: string;
-  roles: string[];
-  iat?: number;
-  exp?: number;
-}
+import { verifyAuth } from './edge-auth';
+import { signToken, TokenPayload } from './jwt';
 
 export async function hashPassword(password: string): Promise<string> {
   return await bcrypt.hash(password, 12);
@@ -23,32 +16,26 @@ export async function verifyPassword(
   return await bcrypt.compare(password, hash);
 }
 
-export function generateTokens(payload: Omit<TokenPayload, 'iat' | 'exp'>) {
-  const accessToken = jwt.sign(payload, process.env.JWT_SECRET!, {
-    expiresIn: '15m',
-  });
-  const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET!, {
-    expiresIn: '7d',
-  });
-
+export async function generateTokens(payload: TokenPayload) {
+  const accessToken = await signToken(payload);
+  const refreshToken = await signToken(payload, true);
   return { accessToken, refreshToken };
 }
 
-export async function verifyToken(
+// This function is for NODE.JS RUNTIME ONLY (e.g., API Route Handlers)
+// It first verifies the token, then checks the database.
+export async function verifyTokenAndGetUser(
   request: NextRequest
 ): Promise<TokenPayload | null> {
+  // Step 1: Perform Edge-safe verification first
+  const decoded = await verifyAuth(request);
+
+  if (!decoded) {
+    return null;
+  }
+
+  // Step 2: Perform Node.js-only database check
   try {
-    // FIX: Get the cookie store directly from the incoming request object.
-    // This is the correct pattern for Route Handlers and Middleware.
-    const cookieStore = request.cookies;
-    const token = cookieStore.get('accessToken')?.value;
-
-    if (!token) {
-      return null;
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as TokenPayload;
-
     const db = await connectToDatabase();
     const user = await db.collection('users').findOne({
       _id: new ObjectId(decoded.userId),
@@ -61,11 +48,12 @@ export async function verifyToken(
 
     return decoded;
   } catch (error) {
-    console.error('Token verification failed:', error);
+    console.error('Database check failed during token verification:', error);
     return null;
   }
 }
 
+// FIX: Implemented the createSession function
 export async function createSession(
   userId: string,
   token: string,
@@ -74,11 +62,12 @@ export async function createSession(
   const db = await connectToDatabase();
 
   const session = {
-    userId,
-    token,
+    userId: new ObjectId(userId), // Store as ObjectId for better indexing
+    token, // The access token
     refreshToken,
     isActive: true,
-    expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+    // The session expires when the access token does, useful for cleanup
+    expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes from now
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -86,11 +75,13 @@ export async function createSession(
   await db.collection('sessions').insertOne(session);
 }
 
+// FIX: Implemented the invalidateUserSessions function
 export async function invalidateUserSessions(userId: string): Promise<void> {
   const db = await connectToDatabase();
 
+  // Find all active sessions for the user and mark them as inactive
   await db.collection('sessions').updateMany(
-    { userId },
+    { userId: new ObjectId(userId), isActive: true },
     {
       $set: {
         isActive: false,

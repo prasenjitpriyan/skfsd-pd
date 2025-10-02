@@ -51,7 +51,8 @@ export async function POST(request: NextRequest) {
       roles: user.roles,
     };
 
-    const { accessToken, refreshToken } = generateTokens(tokenPayload);
+    // FIX: Added 'await' because generateTokens is an async function and returns a Promise.
+    const { accessToken, refreshToken } = await generateTokens(tokenPayload);
 
     // Create session
     await createSession(user._id.toString(), accessToken, refreshToken);
@@ -62,7 +63,6 @@ export async function POST(request: NextRequest) {
       .updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } });
 
     // Remove password from response
-    // FIX 3: Disable ESLint warning for this line as this is an intentional pattern.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userResponse } = user;
 
@@ -91,7 +91,6 @@ export async function POST(request: NextRequest) {
     });
 
     return response;
-    // FIX 1: Change 'any' to 'unknown' for safer error handling.
   } catch (error: unknown) {
     console.error('Login error:', error);
 
@@ -102,7 +101,6 @@ export async function POST(request: NextRequest) {
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid input data',
-            // FIX 2: The correct property on a ZodError is 'issues', not 'errors'.
             details: error.issues,
           },
         },

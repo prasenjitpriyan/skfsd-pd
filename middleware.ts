@@ -1,37 +1,35 @@
-import { verifyToken } from '@/lib/auth';
+import { verifyAuth } from '@/lib/edge-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Public routes that don't require authentication
+  // This list can be simplified
+  const publicPaths = ['/auth', '/api/auth', '/api/health'];
+
   if (
-    pathname.startsWith('/auth/') ||
-    pathname.startsWith('/api/auth/') ||
-    pathname.startsWith('/api/health') ||
     pathname === '/' ||
-    pathname.startsWith('/_next/') ||
-    pathname.startsWith('/favicon')
+    publicPaths.some((path) => pathname.startsWith(path))
   ) {
     return NextResponse.next();
   }
 
-  // Protected routes
-  if (pathname.startsWith('/dashboard') || pathname.startsWith('/api/')) {
-    const token = await verifyToken(request);
+  // All other routes, including /dashboard and /api/* (except public ones), are protected.
+  const payload = await verifyAuth(request);
 
-    if (!token) {
-      if (pathname.startsWith('/api/')) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
-          },
-          { status: 401 }
-        );
-      } else {
-        return NextResponse.redirect(new URL('/auth/login', request.url));
-      }
+  if (!payload) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+        },
+        { status: 401 }
+      );
+    } else {
+      const loginUrl = new URL('/auth/login', request.url);
+      loginUrl.searchParams.set('from', pathname);
+      return NextResponse.redirect(loginUrl);
     }
   }
 
@@ -39,13 +37,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

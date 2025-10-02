@@ -1,44 +1,33 @@
-import { verifyToken } from '@/lib/auth';
-import { connectToDatabase } from '@/lib/db';
-import { ObjectId } from 'mongodb';
+// FIX: Import the correct, renamed function.
+import { verifyTokenAndGetUser } from '@/lib/auth';
 import { NextRequest, NextResponse } from 'next/server';
+// Note: You no longer need 'mongodb' or 'db' imports here
 
 export async function GET(request: NextRequest) {
   try {
-    const tokenPayload = await verifyToken(request);
-
-    if (!tokenPayload) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
-        },
-        { status: 401 }
-      );
-    }
-
-    const db = await connectToDatabase();
-    const user = await db
-      .collection('users')
-      .findOne(
-        { _id: new ObjectId(tokenPayload.userId), isActive: true },
-        { projection: { password: 0 } }
-      );
+    // FIX: Call the correct function. It now returns the full user object or null.
+    const user = await verifyTokenAndGetUser(request);
 
     if (!user) {
       return NextResponse.json(
         {
           success: false,
-          error: { code: 'USER_NOT_FOUND', message: 'User not found' },
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Invalid or expired token, or user not found',
+          },
         },
-        { status: 404 }
+        { status: 401 }
       );
     }
+
+    // FIX: The second database call is now completely removed.
 
     return NextResponse.json({
       success: true,
       data: {
-        user: { ...user, id: user._id.toString() },
+        // The user object is already prepared
+        user: user,
       },
     });
   } catch (error) {
