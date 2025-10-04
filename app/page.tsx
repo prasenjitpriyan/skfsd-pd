@@ -9,11 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  // Check if user is authenticated
   const cookieStore = cookies();
   const accessToken = (await cookieStore).get('accessToken');
 
-  // Redirect to dashboard if authenticated, otherwise to login
   if (accessToken) {
     redirect('/dashboard');
   } else {

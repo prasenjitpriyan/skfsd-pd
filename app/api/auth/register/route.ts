@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       twoFactorEnabled: false,
       preferences: {
         theme: 'system',
-        language: 'en',
+        language: 'en-US',
         notifications: {
           email: true,
           push: true,

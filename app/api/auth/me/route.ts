@@ -1,11 +1,8 @@
-// FIX: Import the correct, renamed function.
 import { verifyTokenAndGetUser } from '@/lib/auth';
 import { NextRequest, NextResponse } from 'next/server';
-// Note: You no longer need 'mongodb' or 'db' imports here
 
 export async function GET(request: NextRequest) {
   try {
-    // FIX: Call the correct function. It now returns the full user object or null.
     const user = await verifyTokenAndGetUser(request);
 
     if (!user) {
@@ -21,12 +18,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // FIX: The second database call is now completely removed.
-
     return NextResponse.json({
       success: true,
       data: {
-        // The user object is already prepared
         user: user,
       },
     });
